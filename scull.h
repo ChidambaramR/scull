@@ -1,6 +1,19 @@
 #ifndef _SCULL_H_
 #define _SCULL_H_
 
+#undef SDEBUG
+
+#ifdef SCULL_DEBUG
+#ifdef __KERNEL__
+/* kernel space */
+#define SDEBUG(fmt, args...) printk(KERN_DEBUG fmt, ## args)
+#else
+#define SDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+#endif
+#else
+#define SDEBUG(fmt, args...) /* nothing */
+#endif
+
 #ifndef SCULL_MAJOR
 #define SCULL_MAJOR 0
 #endif

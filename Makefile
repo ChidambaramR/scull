@@ -1,3 +1,13 @@
+CONFIG_MODULE_SIG=n
+
+DEBUG=y
+
+ifeq ($(DEBUG),y)
+	DEBFLAGS = -o0 -g -DSCULL_DEBUG
+endif
+# EXTRA_CFLAGS apply onlt to kernel (kbuild) make file.
+EXTRA_CFLAGS += $(DEBFLAGS)
+
 ifneq ($(KERNELRELEASE),)
 
 # We are called from the kernel build system

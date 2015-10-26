@@ -65,12 +65,18 @@ void scull_setup_cdev(struct scull_dev *dev, int id)
 {
 	int err;
 	int devno = MKDEV(scull_major, scull_minor + id);
+
+	SDEBUG("scull_setup_cdev entered\n");
+
 	cdev_init(&(dev->cdev), &scull_fops);
 	dev->cdev.owner = THIS_MODULE;
 	dev->cdev.ops = &scull_fops;
 	err = cdev_add(&dev->cdev, devno, 1);
+
 	if (err)
-		pr_debug("Error %d adding scull%d\n",err,id);
+		SDEBUG("Error %d adding scull%d\n",err,id);
+
+	SDEBUG("cdev_add succeeded\n");
 }
 
 void scull_exit_module(void)
@@ -92,6 +98,8 @@ int scull_init_module(void)
 	dev_t dev = 0;
 	int i, result;
 
+	SDEBUG("Entered init function\n");
+
 	if (scull_major) {
 		/*
 		 * dev_t has 12 bits major no, 20 bits minor no.
@@ -103,30 +111,47 @@ int scull_init_module(void)
 	} else {
 		result = alloc_chrdev_region(&dev, scull_minor, scull_nr_devs,
 					      "scull");
+		SDEBUG("alloc_chrdev_region returned %d\n",result);
+
 		/*
 		 * MAJOR gets the major number part in dev_t
 		 */
 		scull_major = MAJOR(dev);
 	}
+
+	SDEBUG("Got major number %d \n",scull_major);
+
 	if (result < 0) {
-		pr_debug("Can't get major number\n");
+		SDEBUG("Can't get major number\n");
 		goto fail;
 	}
 
-	scull_devices = kmalloc(scull_nr_devs * sizeof(struct scull_dev),
-				GFP_KERNEL);
+	scull_devices = (struct scull_dev **)kmalloc(scull_nr_devs
+				* sizeof(struct scull_dev**), GFP_KERNEL);
+
 	if (!scull_devices) {
 		result = -ENOMEM;
 		goto fail;
 	}
-	memset(scull_devices, 0, scull_nr_devs * sizeof(struct scull_dev));
+
+	SDEBUG("About to memset\n");
+	memset(scull_devices, 0, scull_nr_devs * sizeof(struct scull_dev**));
+
+	for (i=0; i < scull_nr_devs; i++) {
+		scull_devices[i] = (struct scull_dev *)kmalloc(
+				sizeof(struct scull_dev), GFP_KERNEL);
+	}
 
 	/* Initialize each devices */
 	for (i=0; i < scull_nr_devs; i++) {
+		SDEBUG("About to set up scull_devices\n");
 		scull_devices[i]->blk_size = scull_blk_size;
 		scull_devices[i]->blk_nr = scull_blk_nr;
+		SDEBUG("About to call scull_setup\n");
 		scull_setup_cdev(scull_devices[i], i);
 	}
+
+	return 0; /* success */
 
 fail:
 	scull_exit_module();
