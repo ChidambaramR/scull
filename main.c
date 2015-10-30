@@ -5,6 +5,7 @@
 #include <linux/cdev.h>	/* cdev_init(), cdev_del() */
 #include <linux/slab.h> /* kmalloc(), kfree() */
 #include <linux/fs.h>	/* file_operations, file, register_chrdev_region etc) */
+#include <asm/uaccess.h> /* copy_*_user functions */
 
 #include "scull.h"
 
@@ -44,6 +45,7 @@ int scull_open(struct inode *inode, struct file *filp)
 	dev = container_of(inode->i_cdev, struct scull_dev, cdev);
 	filp->private_data = dev;
 
+	SDEBUG("Device opened\n");
 	return 0;	/* Success */
 }
 
@@ -52,10 +54,35 @@ int scull_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+ssize_t scull_read(struct file *filp, char __user *buf, size_t count,
+		  loff_t *f_pos)
+{
+	struct scull_dev *dev = filp->private_data;
+	struct scull_data *data = dev->data;
+	ssize_t retval = 0;
+
+	SDEBUG("File read\n");
+
+	if (!data) {
+		data = (struct scull_data *)kmalloc(
+			sizeof(struct scull_data), GFP_KERNEL);
+		memset(data, 0, sizeof(struct scull_data));
+	}
+
+	data->dev_data = (char *)kmalloc(20, GFP_KERNEL);
+	strncpy(data->dev_data, "HelloWorld", 10);
+
+	SDEBUG("Copy to user\n");
+	if (copy_to_user(buf, data->dev_data, 10))
+		retval = -EFAULT;
+
+	return retval;
+}
+
 struct file_operations scull_fops = {
 	.owner = THIS_MODULE,
 	.llseek = nullptr,
-	.read = nullptr,
+	.read = scull_read,
 	.write = nullptr,
 	.open = scull_open,
 	.release = scull_release,

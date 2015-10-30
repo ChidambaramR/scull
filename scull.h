@@ -33,7 +33,7 @@
 #define nullptr 0x0
 
 struct scull_data {
-	void **data;			/* Pointer to actual data block */
+	void *dev_data;			/* Pointer to actual data block */
 	struct scull_data *next;
 };
 
